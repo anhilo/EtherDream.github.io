@@ -42,21 +42,21 @@
     PBKDF2.OnInit = function(success) {
       if (!success) {
         log('fail');
-        updateButtonState(0, 0);
+        updateUIState(0, 0, 1);
         return;
       }
       log('===== ready =====');
-      updateButtonState(1, 0);
+      updateUIState(1, 0, 1);
     };
 
     PBKDF2.OnComplete = function(id, dk) {
       var t = +new Date() - tick;
       log(dk + '  (use ' + t + 'ms)');
-      updateButtonState(1, 0);
+      updateUIState(1, 0, 1);
     }
 
     btnHash.onclick = function() {
-      updateButtonState(0, 1);
+      updateUIState(0, 1, 0);
 
       var pass = txtPass.value;
       var salt = txtSalt.value;
@@ -69,7 +69,7 @@
 
     btnStop.onclick = function() {
       log('canceled');
-      updateButtonState(1, 0);
+      updateUIState(1, 0, 1);
 
       PBKDF2.Stop(taskID);
     };
@@ -78,12 +78,14 @@
       var api = optAPI.options[optAPI.selectedIndex].value;
 
       log('init api: ' + api);
+      updateUIState(0, 0, 0);
       PBKDF2.Init(api);
     };
 
-    function updateButtonState(b1, b2) {
+    function updateUIState(b1, b2, o1) {
       btnHash.disabled = !b1;
       btnStop.disabled = !b2;
+      optAPI.disabled = !o1;
     }
 
     function log(s) {
@@ -92,7 +94,6 @@
     }
 
     function main() {
-      updateButtonState(0, 0);
       txtLog.value = '';
       optAPI.onchange();
     }

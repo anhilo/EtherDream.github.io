@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <title>Fast PBKDF2</title>
+  <meta charset='utf-8' />
+  <style>
+    body, textarea, input { font-family: monospace; }
+    #txtLog {
+      width: 800px;
+      height: 300px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <script src="pbkdf2.js"></script>
+
+  <h1>Fast Online PBKDF2-SHA256</h1>
+  <fieldset>
+    <legend>Input</legend>
+    <div>口令: <input id="txtPass" type="text" value="hello1234"></div>
+    <div>盐值: <input id="txtSalt" type="text" value="jack@gmail.com"></div>
+    <div>迭代: <input id="txtNum" type="number" value="1000000"></div>
+    <div>API:
+      <select id="optAPI">
+        <option value="webcrypt">WebCrypt</option>
+        <option value="asmjs" selected>asm.js</option>
+        <option value="flascc">FlasCC</option>
+      <select>
+    </div>
+  </fieldset>
+  <div>
+    <button id="btnHash">计算</button>
+    <button id="btnStop">停止</button>
+  </div>
+  <textarea id="txtLog" readonly></textarea>
+
+  <script>
+    var taskID;
+    var tick;
+
+    PBKDF2.OnInit = function(success) {
+      if (!success) {
+        log('fail');
+        updateButtonState(0, 0);
+        return;
+      }
+      log('===== ready =====');
+      updateButtonState(1, 0);
+    };
+
+    PBKDF2.OnComplete = function(id, dk) {
+      var t = +new Date() - tick;
+      log(dk + '  (use ' + t + 'ms)');
+      updateButtonState(1, 0);
+    }
+
+    btnHash.onclick = function() {
+      updateButtonState(0, 1);
+
+      var pass = txtPass.value;
+      var salt = txtSalt.value;
+      var iter = +txtNum.value;
+
+      log('pbkdf2_sha256(pass=' + pass + ', salt=' + salt + ', iter=' + iter + ')');
+      tick = +new Date();
+      taskID = PBKDF2.Hash(pass, salt, iter);
+    };
+
+    btnStop.onclick = function() {
+      log('canceled');
+      updateButtonState(1, 0);
+
+      PBKDF2.Stop(taskID);
+    };
+
+    optAPI.onchange = function() {
+      var api = optAPI.options[optAPI.selectedIndex].value;
+
+      log('init api: ' + api);
+      PBKDF2.Init(api);
+    };
+
+    function updateButtonState(b1, b2) {
+      btnHash.disabled = !b1;
+      btnStop.disabled = !b2;
+    }
+
+    function log(s) {
+      // var t = new Date().toISOString().substr(11, 12);
+      txtLog.value += (s + '\n');
+    }
+
+    function main() {
+      updateButtonState(0, 0);
+      txtLog.value = '';
+      optAPI.onchange();
+    }
+    main();
+  </script>
+</body>
+</html>

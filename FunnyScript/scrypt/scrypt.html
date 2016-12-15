@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <title>scrypt test</title>
+  <meta charset='utf-8' />
+  <style>
+    body, textarea, input { font-family: monospace; }
+    #txtLog {
+      width: 800px;
+      height: 600px;
+      font-size: 12px;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- <script src="scrypt.js"></script> -->
+  <script src="dist/scrypt.min.js"></script>
+
+  <h1>online scrypt</h1>
+  <fieldset>
+    <legend>Input</legend>
+    <div>Pass: <input id="txtPass" type="text" value="hello1234"></div>
+    <div>Salt: <input id="txtSalt" type="text" value="jack@gmail.com"></div>
+    <div>dkLen: <input id="txtDKLen" type="number" value="32"></div>
+    <div>r: <input id="txtR" type="number" value="8" readonly></div>
+    <div>P: <input id="txtP" type="number" value="128"></div>
+    <div>N: <input id="txtN" type="number" value="16384"></div>
+    <div>
+      <button id="btnHash">Hash</button>
+      <button id="btnStop">Stop</button>
+      <div>
+        Prog: <progress id="progUI" value="0" max="100"></progress>
+      </div>
+    </div>
+  </fieldset>
+  <fieldset>
+    <legend>Output</legend>
+    <textarea id="txtLog"></textarea>
+    <div>
+      <button id="btnCls">Clear</button>
+    </div>
+  </fieldset>
+
+  <script>
+    var tick;
+
+    scrypt.onprogress = function(percent) {
+      progUI.value = 100 * percent;
+      // console.log(percent);
+    };
+
+    scrypt.oncomplete = function(dk) {
+      var t = +new Date() - tick;
+      log('done! dk: ' + dk + ' time: ' + t + 'ms');
+      updateButton(1, 0);    
+    };
+
+    scrypt.onready = function() {
+      tick = +new Date();
+      scrypt.hash(txtPass.value, txtSalt.value);
+    };
+
+    btnHash.onclick = function() {
+      var param = {
+        N: +txtN.value,
+        P: +txtP.value,
+        r: +txtR.value
+      };
+      var opt = {
+        dkLen: +txtDKLen.value
+        // thread: 4
+      };
+
+      scrypt.config(param, opt);
+
+      log('scrypt(' +
+          'P="' + txtPass.value + '", ' +
+          'S="' + txtSalt.value + '", ' +
+          'r=' + param.r + ', ' +
+          'N=' + param.N + ', ' +
+          'P=' + param.P + ', ' +
+          'dkLen=' + opt.dkLen + ')'
+      );
+      updateButton(0, 1);
+    };
+
+    btnStop.onclick = function() {
+      log('canceled');
+      updateButton(1, 0);
+
+      scrypt.stop();
+    };
+
+    function updateButton(b1, b2) {
+      btnHash.disabled = !b1;
+      btnStop.disabled = !b2;
+    }
+
+    function log(s) {
+      txtLog.value += (s + '\n');
+    }
+
+    btnCls.onclick = function() {
+      txtLog.value = '';
+    }
+
+    function main() {
+      txtLog.value = '';
+      updateButton(1, 0);
+    }
+    main();
+  </script>
+</body>
+</html>

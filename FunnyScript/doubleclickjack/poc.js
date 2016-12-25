@@ -43,11 +43,21 @@ function getChromeUI() {
 	return rect
 }
 
+
+function getFireFoxUI() {
+
+}
+
+
 function getUI() {
 	var ua = navigator.userAgent;
 	if (/Chrome/.test(ua)) {
 		return getChromeUI();
 	}
+	if (/Firefox/.test(ua)) {
+		return getFireFoxUI();
+	}
+	
 	// ..
 }
 
@@ -65,6 +75,7 @@ function initUI() {
 		'height:' + ui.h + 'px';
 
 	btn.onclick = clickHandler;
+	btn.hidden = false;
 }
 
 
@@ -85,7 +96,7 @@ function deviceCheck() {
 
 function main() {
 	if (!mediaDevices) {
-		alert('浏览器不支持');
+		alert('浏览器版本过低');
 		return;
 	}
 	deviceCheck().then(_ => {

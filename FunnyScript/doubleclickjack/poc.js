@@ -4,7 +4,14 @@ var supportAudio;
 var supportVideo;
 
 
+var pending;
+
 function clickHandler() {
+	if (pending) {
+		return;
+	}
+	pending = true;
+
 	var param = {
 		audio: true,
 		video: true
@@ -14,8 +21,10 @@ function clickHandler() {
 			console.log(stream);
 			video.src = URL.createObjectURL(stream);
 			btn.hidden = true;
+			pending = false;
 		})
 		.catch(err => {
+			pending = false;
 			console.warn(err);
 		})
 }

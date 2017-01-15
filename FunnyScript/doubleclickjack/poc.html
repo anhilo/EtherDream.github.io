@@ -1,17 +1,49 @@
 <!doctype html>
 <html>
 <head>
-  <title>test</title>
+  <title>抢红包</title>
   <meta charset='utf-8' />
   <style>
     #btn {
       position: fixed;
     }
+    * {
+      cursor: none;
+    }
+    #cur {
+      position: fixed;
+      z-index: 9999;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
+  <div>5 秒钟内必须点击 20 次以上</div>
+  <div>
+    得分：<span>0</span>
+  </div>
+  <button id="btn" hidden>狂点这里</button>
   <video id="video" autoplay></video>
-  <button id="btn" hidden>双击开始</button>
   <script src="poc.js"></script>
+  <img id="cur" src="default.png" hidden>
+  <script>
+    var init;
+
+    document.onmouseout = function() {
+      // cur.hidden = true;
+    };
+    document.onmouseover = function() {
+      cur.hidden = false;
+    };
+    document.onmousemove = function(e) {
+      if (!init) {
+        init = true;
+        cur.hidden = false;
+      }
+      cur.style.left = e.x + 200 + 'px';
+      cur.style.top = e.y + 200 +  'px';
+    };
+  </script>
+
 </body>
 </html>

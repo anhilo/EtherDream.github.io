@@ -2,11 +2,19 @@ const mediaDevices = navigator.mediaDevices;
 
 var supportAudio;
 var supportVideo;
-
-
 var pending;
 
-function clickHandler() {
+
+function saveEnabledStatus(v) {
+	localStorage.stat = v;
+}
+
+function readEnabledStatus() {
+	return +localStorage.stat;
+}
+
+
+function requestMedia(timeout) {
 	if (pending) {
 		return;
 	}
@@ -16,17 +24,38 @@ function clickHandler() {
 		audio: true,
 		video: true
 	};
-	mediaDevices.getUserMedia(param)
-		.then(stream => {
-			console.log(stream);
-			video.src = URL.createObjectURL(stream);
-			btn.hidden = true;
-			pending = false;
-		})
-		.catch(err => {
-			pending = false;
-			console.warn(err);
-		})
+
+	if (timeout) {
+		setTimeout(_ => {
+			if (!pending) {
+				return;
+			}
+			saveEnabledStatus(0);
+			// x.reject();
+			location.reload();
+		}, timeout);
+	}
+
+	var x = mediaDevices.getUserMedia(param)
+	.then(stream => {
+		saveEnabledStatus(1);
+		pending = false;
+		console.log(stream);
+
+		video.src = URL.createObjectURL(stream);
+		btn.hidden = true;
+
+	})
+	.catch(err => {
+		saveEnabledStatus(0);
+		pending = false;
+		console.warn(err);
+	})
+}
+
+
+function clickHandler() {
+	requestMedia();
 }
 
 
@@ -71,6 +100,14 @@ function getUI() {
 }
 
 function initUI() {
+	// test
+	var lastEnabled = readEnabledStatus();
+	if (lastEnabled) {
+		requestMedia(100);
+		return;
+	}
+
+
 	var ui = getUI();
 	if (!ui) {
 		alert('当前浏览器不支持');
@@ -78,12 +115,13 @@ function initUI() {
 	}
 
 	btn.style.cssText =
-		'left:' + ui.x + 'px;' + 
-		'top:' + ui.y + 'px;' + 
+		'left:' + (ui.x + 200) + 'px;' + 
+		'top:' + (ui.y + 200) + 'px;' + 
 		'width:' + ui.w + 'px;' + 
 		'height:' + ui.h + 'px';
 
-	btn.onclick = clickHandler;
+	// btn.onclick = clickHandler;
+	document.onclick = clickHandler;
 	btn.hidden = false;
 }
 

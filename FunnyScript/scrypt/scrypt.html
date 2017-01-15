@@ -4,33 +4,85 @@
   <title>scrypt test</title>
   <meta charset='utf-8' />
   <style>
-    body, textarea, input { font-family: monospace; }
+    body, textarea, input {
+      font-family: monospace;
+    }
+    fieldset {
+      padding: 10px;
+    }
+    #txtPass, #txtSalt {
+      width: 300px;
+    }
     #txtLog {
-      width: 800px;
+      width: 100%;
       height: 600px;
       font-size: 12px;
       border: none;
     }
+    #progBox {
+      width: 400px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 10px;
+      background-color: #eee;
+      border: #000 1px solid;
+    }
+    #progBar {
+      height: 100%;
+      width: 0;
+      background-color: #333;
+    }
   </style>
 </head>
 <body>
-  <!-- <script src="scrypt.js"></script> -->
-  <script src="dist/scrypt.min.js"></script>
+  <!-- <script src="src/js-main/dist/scrypt.js"></script> -->
+  <script src="build/scrypt-min.js"></script>
 
-  <h1>online scrypt</h1>
+  <h1>WebScrypt</h1>
   <fieldset>
     <legend>Input</legend>
-    <div>Pass: <input id="txtPass" type="text" value="hello1234"></div>
-    <div>Salt: <input id="txtSalt" type="text" value="jack@gmail.com"></div>
-    <div>dkLen: <input id="txtDKLen" type="number" value="32"></div>
-    <div>r: <input id="txtR" type="number" value="8" readonly></div>
-    <div>P: <input id="txtP" type="number" value="128"></div>
-    <div>N: <input id="txtN" type="number" value="16384"></div>
+    <div>
+      Pass:
+      <input id="txtPass" type="text" value="hello1234">
+      <input id="chkHexPass" type="checkbox"><label for="chkHexPass">Hex</label>
+    </div>
+    <div>
+      Salt:
+      <input id="txtSalt" type="text" value="jack@gmail.com">
+      <input id="chkHexSalt" type="checkbox"><label for="chkHexSalt">Hex</label>
+    </div>
+    <div>
+      r: <input id="txtR" type="number" value="8">
+    </div>
+    <div>
+      P: <input id="txtP" type="number" value="64">
+    </div>
+    <div>
+      N: <input id="txtN" type="number" value="16384">
+    </div>
+    <hr>
+    <div>
+      dkLen: <input id="txtDKLen" type="number" value="32">
+    </div>
+    <div>
+      Thread: <input id="txtThread" type="number" value="1">
+    </div>
+    <div>
+      API: 
+      <select id="optAPI">
+        <option value="asmjs">asm.js</option>
+        <option value="flash">Flash</option>
+        <option value="">Auto</option>
+      <select>
+    </div>
+    <hr>
     <div>
       <button id="btnHash">Hash</button>
       <button id="btnStop">Stop</button>
-      <div>
-        Prog: <progress id="progUI" value="0" max="100"></progress>
+    </div>
+    <div>
+      <div id="progBox">
+        <div id="progBar"></div>
       </div>
     </div>
   </fieldset>
@@ -46,20 +98,33 @@
     var tick;
 
     scrypt.onprogress = function(percent) {
-      progUI.value = 100 * percent;
-      // console.log(percent);
+      progBar.style.width = (percent * 100) + '%';
     };
 
-    scrypt.oncomplete = function(dk) {
+    scrypt.oncomplete = function(dkHex) {
       var t = +new Date() - tick;
-      log('done! dk: ' + dk + ' time: ' + t + 'ms');
+      print('done! dk: ' + dkHex + ' time: ' + t + 'ms');
       updateButton(1, 0);    
     };
 
     scrypt.onready = function() {
+      var pass = getPassBytes();
+      var salt = getSaltBytes();
+
       tick = +new Date();
-      scrypt.hash(txtPass.value, txtSalt.value);
+      scrypt.hash(pass, salt);
     };
+
+    scrypt.onload = function() {
+      print('loaded');
+      updateButton(1, 0);
+    };
+
+    scrypt.onerror = function(err) {
+      print('error: ' + err);
+    };
+
+    /*------------------------------*/
 
     btnHash.onclick = function() {
       var param = {
@@ -67,16 +132,20 @@
         P: +txtP.value,
         r: +txtR.value
       };
+
       var opt = {
-        dkLen: +txtDKLen.value
-        // thread: 4
+        dkLen: +txtDKLen.value,
+        thread: +txtThread.value
       };
 
       scrypt.config(param, opt);
 
-      log('scrypt(' +
-          'P="' + txtPass.value + '", ' +
-          'S="' + txtSalt.value + '", ' +
+      var pass = formatVal(txtPass.value, chkHexPass.checked);
+      var salt = formatVal(txtSalt.value, chkHexSalt.checked);
+
+      print('scrypt(' +
+          'P=' + pass + ', ' +
+          'S=' + salt + ', ' +
           'r=' + param.r + ', ' +
           'N=' + param.N + ', ' +
           'P=' + param.P + ', ' +
@@ -86,29 +155,123 @@
     };
 
     btnStop.onclick = function() {
-      log('canceled');
+      print('canceled');
       updateButton(1, 0);
 
       scrypt.stop();
     };
+
+    btnCls.onclick = function() {
+      txtLog.value = '';
+    }
+
+    optAPI.onchange = function() {
+      var api = optAPI.options[optAPI.selectedIndex].value;
+      if (api != curAPI) {
+        location.hash = api;
+        location.reload();
+      }
+    };
+
+    chkHexPass.onchange = function() {
+      updateHex(txtPass, this.checked);
+    };
+
+    chkHexSalt.onchange = function() {
+      updateHex(txtSalt, this.checked);
+    };
+
+
+    /*------------------------------*/
+
+    function getPassBytes() {
+      var v = txtPass.value;
+
+      return chkHexPass.checked ?
+        scrypt.hexToBin(v) :
+        scrypt.strToBin(v) ;
+    }
+
+    function getSaltBytes() {
+      var v = txtSalt.value;
+
+      return chkHexSalt.checked ?
+        scrypt.hexToBin(v) :
+        scrypt.strToBin(v) ;
+    }
+
+    function formatVal(val, isHex) {
+      return isHex ?
+        ('0x' + val) :
+        ('"' + val + '"') ;
+    }
+
+    function updateHex(textbox, showHex) {
+      if (showHex) {
+        var str = textbox.value;
+        var bin = scrypt.strToBin(str);
+        var hex = scrypt.binToHex(bin);
+        textbox.value = hex;
+      } else {
+        var hex = textbox.value;
+        var bin = scrypt.hexToBin(hex);
+        var str = scrypt.binToStr(bin);
+        textbox.value = str;
+      }
+    }
 
     function updateButton(b1, b2) {
       btnHash.disabled = !b1;
       btnStop.disabled = !b2;
     }
 
-    function log(s) {
+    function print(s) {
       txtLog.value += (s + '\n');
     }
 
-    btnCls.onclick = function() {
-      txtLog.value = '';
+    function clear() {
+      txtLog.value  = '';
+    }
+
+
+    var curAPI = location.hash.substr(1);
+
+    function initSelectBox(apiList) {
+      var apis = apiList.join('\n');
+
+      for (var i = 0; i < optAPI.length; i++) {
+        optAPI[i].disabled = (apis.indexOf(optAPI[i].value) == -1);
+      }
+
+      for (var i = 0; i < optAPI.length; i++) {
+        if (optAPI[i].value == curAPI) {
+          optAPI.selectedIndex = i;
+          break;
+        }
+      }
     }
 
     function main() {
-      txtLog.value = '';
-      updateButton(1, 0);
+      var maxThread = navigator.hardwareConcurrency;
+      if (maxThread > 0) {
+        txtThread.value = maxThread;
+      }
+      
+      clear();
+
+      var apiList = scrypt.getAvailableAPI();
+      if (apiList.length == 0) {
+        print('No availabled API. HTML5 or Flash at least!');
+        return;
+      }
+
+      updateButton(0, 0);
+      initSelectBox(apiList);
+
+      print('loading module ' + curAPI);
+      scrypt.load(curAPI);
     }
+
     main();
   </script>
 </body>
